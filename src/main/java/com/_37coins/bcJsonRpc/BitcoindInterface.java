@@ -84,6 +84,7 @@ public interface BitcoindInterface {
 	public String sendtoaddress(String bitcoinAddress, BigDecimal amount);
 	public void setgenerate (boolean generate);
 	public void setgenerate (boolean generate, int genproclimit);
+	public List<String> generate(int numblocks);
 	// Return information about bitcoinaddress.
 	public AddressInformation validateaddress(String bitcoinAddress);
 	//Returns a new bitcoin address for receiving payments. If [account] is specified (recommended), it is added to the address book so payments received with the address will be credited to [account].

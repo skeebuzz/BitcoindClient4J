@@ -61,6 +61,10 @@ public class BitcoindClientFactory {
 	}
 	
 	public BitcoindClientFactory(String path, final List<String> cmd) throws IOException{
+		this(path, cmd, 8333, 8332);
+	}
+
+	public BitcoindClientFactory(String path, final List<String> cmd, int port, int rpcport) throws IOException{
 		if (isWindows()){
 			throw new RuntimeException("OS not supported");
 		}
@@ -89,6 +93,8 @@ public class BitcoindClientFactory {
 		l.add("-alertnotify=\"echo '%s' | nc 127.0.0.1 "+alertSocket.getLocalPort()+"\"");
 		l.add("-daemon");
 		l.add("-server");
+		l.add("-rpcport=" + rpcport);
+		l.add("-port=" + port);
 		//execute command
 		ProcessBuilder pb = new ProcessBuilder(l);
 		pb.directory(new File(path));
@@ -103,7 +109,7 @@ public class BitcoindClientFactory {
 		String cred = Base64.encodeBytes((user + ":" + pw).getBytes());
 		Map<String, String> headers = new HashMap<>(1);
 		headers.put("Authorization", "Basic " + cred);
-		client = new JsonRpcHttpClient(new URL("http://localhost:8332/"), headers);
+		client = new JsonRpcHttpClient(new URL("http://localhost:" + rpcport + "/"), headers);
 		//wait for node startup
 		boolean success =false;
 		for (int i = 10; i > 0; i--){
