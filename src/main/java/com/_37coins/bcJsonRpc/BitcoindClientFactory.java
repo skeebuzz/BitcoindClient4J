@@ -65,6 +65,18 @@ public class BitcoindClientFactory {
 	}
 
 	public BitcoindClientFactory(String path, final List<String> cmd, int port, int rpcport) throws IOException{
+		//prepare user
+		String[] uuid = UUID.randomUUID().toString().split("-");
+		String user = uuid[0]+uuid[2];
+		String pw = uuid[4]+uuid[3]+uuid[1];
+		client = init(path, cmd, user, pw, port, rpcport);
+	}
+
+	public BitcoindClientFactory(String path, final List<String> cmd, String rpcUser, String rpcPassword, int port, int rpcport) throws IOException{
+		client = init(path, cmd, rpcUser, rpcPassword, port, rpcport);
+	}
+
+	private static JsonRpcHttpClient init(String path, final List<String> cmd, String rpcUser, String rpcPassword, int port, int rpcport) throws IOException {
 		if (isWindows()){
 			throw new RuntimeException("OS not supported");
 		}
@@ -72,10 +84,6 @@ public class BitcoindClientFactory {
 		blockSocket = new ServerSocket(0);
 		walletSocket = new ServerSocket(0);
 		alertSocket = new ServerSocket(0);
-		//prepare user
-		String[] uuid = UUID.randomUUID().toString().split("-");
-		String user = uuid[0]+uuid[2];
-		String pw = uuid[4]+uuid[3]+uuid[1];
 		//prepare command
 		List<String> l = new ArrayList<String>();
 		for (String s: cmd){
@@ -85,8 +93,8 @@ public class BitcoindClientFactory {
 				l.add(s);
 			}
 		}
-		l.add("-rpcuser="+user);
-		l.add("-rpcpassword="+pw);
+		l.add("-rpcuser="+rpcUser);
+		l.add("-rpcpassword="+rpcPassword);
 		l.add("-checklevel=2");
 		l.add("-blocknotify=\"echo '%s' | nc 127.0.0.1 "+blockSocket.getLocalPort()+"\"");
 		l.add("-walletnotify=\"echo '%s' | nc 127.0.0.1 "+walletSocket.getLocalPort()+"\"");
@@ -106,16 +114,16 @@ public class BitcoindClientFactory {
 			throw new RuntimeException(convertStream(p.getErrorStream()));
 		}
 		//start client
-		String cred = Base64.encodeBytes((user + ":" + pw).getBytes());
+		String cred = Base64.encodeBytes((rpcUser + ":" + rpcPassword).getBytes());
 		Map<String, String> headers = new HashMap<>(1);
 		headers.put("Authorization", "Basic " + cred);
-		client = new JsonRpcHttpClient(new URL("http://localhost:" + rpcport + "/"), headers);
+		JsonRpcHttpClient jsonClient = new JsonRpcHttpClient(new URL("http://localhost:" + rpcport + "/"), headers);
 		//wait for node startup
 		boolean success =false;
 		for (int i = 10; i > 0; i--){
 			try{
 				ProxyUtil.createClientProxy(BitcoindInterface.class.getClassLoader(),
-						BitcoindInterface.class, client).getinfo();
+						BitcoindInterface.class, jsonClient).getinfo();
 				success = true;
 			}catch(Exception e){
 				try {
@@ -130,6 +138,7 @@ public class BitcoindClientFactory {
 		if (!success){
 			throw new IOException("could not connect to bitcoind");
 		}
+		return jsonClient;
 	}
 	
 	public BitcoindInterface getClient() {
